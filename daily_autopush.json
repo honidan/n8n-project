@@ -1,0 +1,197 @@
+{
+  "name": "Xuji_daily_autopush",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -100,
+        -200
+      ],
+      "id": "cb46108a-b3f3-4e17-9787-454b31632851",
+      "name": "When clicking ‘Test workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"UID\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"BOT推播｜旭集和姿繪｜\\\\n{{ $node['Choose yesterday'].json['yesterday'] }}的生成影片數是: {{ $json.sumCount }}\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "id": "41f75f6d-11b8-43c7-8462-b484604a2429",
+      "name": "Line : Push Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        680,
+        0
+      ],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wevpeepczjEwqUUb",
+          "name": "ReperBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fabdynamic.hbldevs.xyz/sunrisemonit/api/data",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"target_time\": \"{{ $json.yesterday }}\"\n}\n\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        280,
+        0
+      ],
+      "id": "57fbfe7e-651f-411c-8011-b862c5f85c30",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "3mPL4X7UFFDKUX69",
+          "name": "fab ID/PW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date();\n\n// 設定為前一天\ntoday.setDate(today.getDate()-1);\n\nconst year = today.getFullYear();\nconst month = String(today.getMonth() + 1).padStart(2, '0');\nconst day = String(today.getDate()).padStart(2, '0');\n\n// 使用Template Literal正確的反引號\nconst formattedDate = `${month}/${day}/${year}`;\n\n// 回傳給下游\nreturn [{\n  json: {\n    yesterday: formattedDate\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        0
+      ],
+      "id": "f7812f76-6ea4-4d40-b64f-8e7c53358b04",
+      "name": "Choose yesterday"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst data = items[0].json.data; // 這是 API 回傳的陣列\nlet sumCount = 0;\ndata.forEach(item => {\n  sumCount += item.count;\n});\n\nreturn [{\n  json: {\n    sumCount\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "fa7fc192-5cc9-4841-b7dd-ada3094b8d12",
+      "name": "video sumCount"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 10 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -100,
+        0
+      ],
+      "id": "33db9e5f-ee2f-4104-b2dd-c6d039e87ff8",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log(\"System TZ Check:\", new Date().toString());\nconsole.log(\"Env TZ:\", process.env.TZ);\nreturn [{\n  json: {\n    now: new Date().toString(),\n    envTz: process.env.TZ || \"Not set\"\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -100,
+        380
+      ],
+      "id": "a98316de-0ae1-483b-8a3f-dfab665d068c",
+      "name": "TimeZoneCheck"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Choose yesterday",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "video sumCount",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose yesterday": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "video sumCount": {
+      "main": [
+        [
+          {
+            "node": "Line : Push Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Choose yesterday",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "versionId": "e95ed05b-f293-4942-9637-dedf2b98e84c",
+  "meta": {
+    "instanceId": "21439bc088871bb3fc41cbeda848540b53f069d7b3e232bdb5cc9c5e95629b38"
+  },
+  "id": "ZQxq1rFkfPGEBLPI",
+  "tags": []
+}

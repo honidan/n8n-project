@@ -1,0 +1,257 @@
+{
+  "name": "Gemini Line chat Bot",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        100
+      ],
+      "id": "edba3ed5-773a-4699-9872-481e35eea0d4",
+      "name": "When clicking ‘Test workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=\n{\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"={{ $json.userMessage }}\"\n        }\n      ]\n    }\n  ]\n}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        340
+      ],
+      "id": "749e4077-5e0f-430c-bd48-cf2634dd8839",
+      "name": "Gemini Text API"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "b63773bb-f010-4018-8142-240c9aaa4570",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.body.events[0].type }}",
+              "rightValue": "message"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d1d5178b-6948-448d-a822-4612494b6127",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        0,
+        360
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = items[0].json.body.events || [];\nconst firstEvent = events[0];\n\n// 取得 replyToken、使用者訊息\nconst replyToken = firstEvent.replyToken;\nconst userMessage = firstEvent.message.text;\nconst userId = firstEvent.source.userId;\n\nreturn [{\n  json: {\n    replyToken,\n    userMessage,\n    userId\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        340
+      ],
+      "id": "297c1835-eced-4099-bb41-8706fa0d5f8a",
+      "name": "analys receive message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\nlet geminiReply = \"No reply from gemini\";\n\n// 假設 data.candidates[0].content.parts[0].text 才是你要的文字\nif (data.candidates && data.candidates.length > 0) {\n  const candidate0 = data.candidates[0];\n  // 檢查 candidate0.content 是否存在，並且 content.parts 是陣列且有至少1筆\n  if (candidate0.content && candidate0.content.parts && candidate0.content.parts.length > 0) {\n    geminiReply = candidate0.content.parts[0].text;\n  }\n}\n\ngeminiReply = geminiReply.replace(/\\n/g, \"\");\n\nreturn [{\n  json: {\n    geminiReply\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        340
+      ],
+      "id": "a7feb27f-ff7b-4e33-bd11-efb829eef41a",
+      "name": "Analys Gemini answer"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        360
+      ],
+      "id": "b30c32cd-1516-40f1-9685-16bfc2d7df78",
+      "name": "Webhook",
+      "webhookId": "b9dba2af-24c7-4682-8e1a-20332d1ec11e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $node['analys receive message'].json['replyToken'] }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{{ $json.geminiReply }}\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        340
+      ],
+      "id": "39a4fb6b-2121-4696-aa4e-4bb3e5a067db",
+      "name": "Gemini Reply Line",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "3mPL4X7UFFDKUX69",
+          "name": "fab ID/PW"
+        },
+        "httpHeaderAuth": {
+          "id": "DES48Z4DCXsoIJqe",
+          "name": "Cutest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "input Gemini API after key=_____",
+        "height": 80,
+        "width": 170
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        500,
+        240
+      ],
+      "id": "dacfafb9-6545-422c-afb7-f6ab3fdadfa5",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "analys receive message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "analys receive message": {
+      "main": [
+        [
+          {
+            "node": "Gemini Text API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Text API": {
+      "main": [
+        [
+          {
+            "node": "Analys Gemini answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analys Gemini answer": {
+      "main": [
+        [
+          {
+            "node": "Gemini Reply Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Reply Line": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6d38aa89-055e-4873-a6d8-78634bece7e9",
+  "meta": {
+    "instanceId": "21439bc088871bb3fc41cbeda848540b53f069d7b3e232bdb5cc9c5e95629b38"
+  },
+  "id": "YL9Qt91DLbwyaoTS",
+  "tags": []
+}
