@@ -1,4 +1,4 @@
-# About Me and My n8n Learning Journey
+# About these n8n Projects
 
 I have no programming background, and now learning to use **n8n**. Feeling the magic. 
 
